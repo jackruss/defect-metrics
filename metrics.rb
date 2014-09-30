@@ -1,22 +1,23 @@
 require 'json'
 require 'time'
+require './defect'
 
 def add_to_table(output,table)
   #puts output
   story_data = JSON.parse(output)
   story_data.each do |story|
-    row = Hash.new
-    row["id"] = story["id"]
+    defect = Defect.new
+    defect.id = story["id"]
 
     # Get the created at timestamp
-    row["created_at"] = Time.at(story["created_at"] / 1000)
+    defect.opened_date = Time.at(story["created_at"] / 1000)
 
     # Parse the PT name text
     name_text = story["name"]
 
     if name_text =~ /TI[0-9]+: /
       workitem_text = name_text.gsub(/: .*/,"")
-      row["work item"] = workitem_text
+      defect.fields["work item"] = workitem_text
     end
 
 
@@ -26,63 +27,61 @@ def add_to_table(output,table)
     template_fields = ["ABSTRACT","DESCRIPTION","IMPACT","PRODUCT","ORIGINATOR","DETAILS","OPENED"]
     splitstring = "%%%JMR%PARSE%HERE%%%"
     template_fields.each do |template_field|
-      string_to_parse = string_to_parse.gsub(/#{template_field}: /,"#{splitstring}#{template_field}: ")
-      string_to_parse = string_to_parse.gsub(/\n*#{splitstring}/,"#{splitstring}")
+      string_to_parse = string_to_parse.gsub(/[\n ]*#{template_field}:[\n ]*/,"#{splitstring}#{template_field}: ")
     end
     string_to_parse = string_to_parse.gsub(/\n/,"<br />")
     field_array = string_to_parse.split(/#{splitstring}/)
     template_fields.each do |template_field|
       field_array.each do |entry|
         if entry =~ /#{template_field}: /
-          row[template_field.downcase] = entry.gsub("#{template_field}: ","")
+          defect.fields[template_field.downcase] = entry.gsub("#{template_field}: ","")
         end
       end
     end
 
     # Overwrite abstract if specified (otherwise pull from the story title)
-    unless row["abstract"]
+    unless defect.fields["abstract"]
       abstract_text = name_text.gsub(/TI.....: /,"")
-      row["abstract"] = abstract_text
+      defect.fields["abstract"] = abstract_text
     end
 
     # Compute age
-    opened_date = row["created_at"]
-    opened_date = Time.parse(row["opened"]) if row["opened"]
+    defect.opened_date = Time.parse(defect.fields["opened"]) if defect.fields["opened"]
     current_date = Time.now
-    row["age"] = (current_date - opened_date).to_i / (24 * 60 * 60)
+    defect.age = (current_date - defect.opened_date).to_i / (24 * 60 * 60)
 
     # Parse the current_state
-    row["state"] = story["current_state"]
+    defect.fields["state"] = story["current_state"]
 
     # Parse the labels
     labels = Hash.new
     story["labels"].each do |label|
       labels[label["name"]] = true
     end
-    row["labels"] = labels
+    defect.fields["labels"] = labels
 
-    if row["labels"]["new"]
-      row["priority text"] = "Not yet prioritized"
-      row["priority value"] = 10
-    elsif row["labels"]["critical"]
-      row["priority text"] = "Critical - ASAP"
-      row["priority value"] = 1
-    elsif row["labels"]["major"]
-      row["priority text"] = "Major - Next Sprint"
-      row["priority value"] = 2
-    elsif row["labels"]["moderate"]
-      row["priority text"] = "Moderate - Earliest Possible Roadmap Item"
-      row["priority value"] = 3
-    elsif row["labels"]["minor"]
-      row["priority text"] = "Minor - To Be Assessed"
-      row["priority value"] = 4
+    if defect.fields["labels"]["new"]
+      defect.priority = :unprioritized
+      defect.fields["priority value"] = 10
+    elsif defect.fields["labels"]["critical"]
+      defect.priority = :critical
+      defect.fields["priority value"] = 1
+    elsif defect.fields["labels"]["major"]
+      defect.priority = :major
+      defect.fields["priority value"] = 2
+    elsif defect.fields["labels"]["moderate"]
+      defect.priority = :moderate
+      defect.fields["priority value"] = 3
+    elsif defect.fields["labels"]["minor"]
+      defect.priority = :minor
+      defect.fields["priority value"] = 4
     else
-      row["priority text"] = "Not yet prioritized"
-      row["priority value"] = 10
+      defect.priority = :unprioritized
+      defect.fields["priority value"] = 10
     end
 
     # Parse the comments
-    row["comments"] = []
+    defect.fields["comments"] = []
     story["comments"].each do |comment|
       if comment["text"] =~ /STATUS: /
         this_comment = Hash.new
@@ -90,11 +89,11 @@ def add_to_table(output,table)
         this_comment["status_update"] = status_update
         status_time = Time.at(comment["created_at"] / 1000)
         this_comment["status_time"] = status_time
-        row["comments"] << this_comment
+        defect.fields["comments"] << this_comment
       end
     end
 
-    table << row
+    table << defect
 
   end
 end
@@ -143,17 +142,17 @@ def print_compact_table_header()
 end
 
 
-def print_compact_table_row(row)
+def print_compact_table_row(defect)
       html = ""
       html << "      <tr>\n"
-      html << "        <td><b><a href=\"https://www.pivotaltracker.com/story/show/#{row["id"]}\">#{row["abstract"]}</a></b></td>\n"
-      html << "        <td>#{row["work item"]}</td>\n"
-      html << "        <td>#{row["description"]}</td>\n"
-      html << "        <td>#{row["impact"]}</td>\n"
-      html << "        <td>#{row["age"]}</td>\n"
-      html << "        <td>#{row["priority text"]}</td>\n"
+      html << "        <td><b><a href=\"https://www.pivotaltracker.com/story/show/#{defect.id}\">#{defect.fields["abstract"]}</a></b></td>\n"
+      html << "        <td>#{defect.fields["work item"]}</td>\n"
+      html << "        <td>#{defect.fields["description"]}</td>\n"
+      html << "        <td>#{defect.fields["impact"]}</td>\n"
+      html << "        <td>#{defect.age.to_s}</td>\n"
+      html << "        <td>#{defect.get_priority_text}</td>\n"
       html << "        <td>\n"
-      row["comments"].each do |comment|
+      defect.fields["comments"].each do |comment|
         html << "<b>#{comment["status_time"].strftime("%m/%d/%Y")}</b> #{comment["status_update"]}<br />\n"
       end
       html << "</td>\n"
@@ -163,7 +162,7 @@ end
 
 
 def active_defect_status(defects)
-  priority_table = defects.sort_by { |row| [row["priority value"],row["age"]] }
+  priority_table = defects.sort_by { |defect| [defect.get_priority_value,defect.age] }
 
   html = "<html>\n"
   html << "  <head>\n"
@@ -179,32 +178,32 @@ def active_defect_status(defects)
   html << "      </tr>\n"
   html << "      <tr>\n"
   html << "      <td>Critical</td>\n"
-  html << "      <td>#{}</td>\n"
+  html << "      <td>#{Defect::get_priority_count(:critical)}</td>\n"
   html << "      </tr>\n"
   html << "      <tr>\n"
   html << "      <td>Major</td>\n"
-  html << "      <td>#{}</td>\n"
+  html << "      <td>#{Defect::get_priority_count(:major)}</td>\n"
   html << "      </tr>\n"
   html << "      <tr>\n"
   html << "      <td>Moderate</td>\n"
-  html << "      <td>#{}</td>\n"
+  html << "      <td>#{Defect::get_priority_count(:moderate)}</td>\n"
   html << "      </tr>\n"
   html << "      <tr>\n"
   html << "      <td>Minor</td>\n"
-  html << "      <td>#{}</td>\n"
+  html << "      <td>#{Defect::get_priority_count(:minor)}</td>\n"
   html << "      </tr>\n"
   html << "      <tr>\n"
   html << "      <td>Unprioritized</td>\n"
-  html << "      <td>#{}</td>\n"
+  html << "      <td>#{Defect::get_priority_count(:unprioritized)}</td>\n"
   html << "      </tr>\n"
   html << "    </table>\n"
   html << "    <br />\n"
   html << "    <p>Defects are listed in priority order, as determined by QA and via the weekly bug scrub.</p>\n"
   html << "    <table class=\"compact-table\">\n"
   html << print_compact_table_header()
-  priority_table.each do |row|
-    unless row["state"] == "accepted" 
-      html << print_compact_table_row(row)
+  priority_table.each do |defect|
+    unless defect.fields["state"] == "accepted" 
+      html << print_compact_table_row(defect)
     end
   end
   html << "    </table>\n"
@@ -215,7 +214,7 @@ def active_defect_status(defects)
 end
 
 def all_defect_status(defects)
-  priority_table = defects.sort_by { |row| [row["priority value"],row["age"]] }
+  priority_table = defects.sort_by { |defect| [defect.get_priority_value,defect.age] }
 
   html = "<html>\n"
   html << "  <head>\n"
@@ -246,19 +245,19 @@ def all_defect_status(defects)
   html << "        <th>Originator</th>\n"
   html << "        <th>Status</th>\n"
   html << "      </tr>\n"
-  priority_table.each do |row|
+  priority_table.each do |defect|
     html << "      <tr>\n"
-    html << "        <td><b><a href=\"https://www.pivotaltracker.com/story/show/#{row["id"]}\">#{row["abstract"]}</a></b></td>\n"
-    html << "        <td>#{row["work item"]}</td>\n"
-    html << "        <td>#{row["product"]}</td>\n"
-    html << "        <td>#{row["abstract"]}</td>\n"
-    html << "        <td>#{row["description"]}</td>\n"
-    html << "        <td>#{row["impact"]}</td>\n"
-    html << "        <td>#{row["age"]}</td>\n"
-    html << "        <td>#{row["priority text"]}</td>\n"
-    html << "        <td>#{row["originator"]}</td>\n"
+    html << "        <td><b><a href=\"https://www.pivotaltracker.com/story/show/#{defect.id}\">#{defect.fields["abstract"]}</a></b></td>\n"
+    html << "        <td>#{defect.fields["work item"]}</td>\n"
+    html << "        <td>#{defect.fields["product"]}</td>\n"
+    html << "        <td>#{defect.fields["abstract"]}</td>\n"
+    html << "        <td>#{defect.fields["description"]}</td>\n"
+    html << "        <td>#{defect.fields["impact"]}</td>\n"
+    html << "        <td>#{defect.age.to_s}</td>\n"
+    html << "        <td>#{defect.get_priority_text}</td>\n"
+    html << "        <td>#{defect.fields["originator"]}</td>\n"
     html << "        <td>\n"
-    row["comments"].each do |comment|
+    defect.fields["comments"].each do |comment|
       html << "<b>#{comment["status_time"].strftime("%m/%d/%Y")}</b> #{comment["status_update"]}<br />\n"
     end
     html << "</td>\n"
