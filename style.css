@@ -1,0 +1,89 @@
+
+body {
+  background-color: #ffffff;
+}
+
+* {
+  font-family: Arial, Helvetica, sans-serif
+}
+
+a:link {
+  text-decoration: none;
+  color: #0000aa;
+}
+
+a:visited {
+  text-decoration: none;
+  color: #0000aa;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: #0000aa;
+}
+
+a:active {
+  text-decoration: underline;
+  color: #0000aa;
+}
+
+.defect-counts {
+  border: 1px solid black;
+  width: 400;
+}
+
+.compact-table {
+  border: 1px solid black;
+  width: 1430px;
+}
+
+tr:nth-child(even) {
+  background-color: #fcfcff;
+}
+
+tr:nth-child(odd) {
+  background-color: #f4f4ff;
+}
+
+th {
+  background-color: #0000aa;
+  color: #ffffff;
+  vertical-align: top;
+  text-align: left;
+  padding: 5px;
+}
+
+td {
+  vertical-align: top;
+  text-align: left;
+  padding: 5px;
+}
+
+.id-col {
+  width: 80px;
+}
+
+.abstract-col {
+  width: 250px;
+}
+
+.description-col {
+  width: 300px;
+}
+
+.impact-col {
+  width: 300px;
+}
+
+.age-col {
+  width: 30px;
+}
+
+.prioritization-col {
+  width: 100px;
+}
+
+.status-col {
+  width: 400px;
+}
+
