@@ -52,6 +52,9 @@ def add_to_table(output,table)
 
     # Parse the current_state
     defect.fields["state"] = story["current_state"]
+    if defect.fields["state"] == "accepted"
+      defect.closed_date = Time.at(story["accepted_at"] / 1000)
+    end
 
     # Parse the labels
     labels = Hash.new
@@ -110,7 +113,7 @@ def build_defect_list
   projects << 1049386 #MU2
   projects.each do |project|
     output = `export PROJECT_ID=#{project.to_s};
-              curl -X GET -H "X-TrackerToken: #{ENV["PT_TOKEN"]}" "https://www.pivotaltracker.com/services/v5/projects/$PROJECT_ID/stories?fields=name,created_at,current_state,description,comments,labels&date_format=millis&filter=label%3Aqa_metric"`
+              curl -X GET -H "X-TrackerToken: #{ENV["PT_TOKEN"]}" "https://www.pivotaltracker.com/services/v5/projects/$PROJECT_ID/stories?fields=name,created_at,current_state,accepted_at,description,comments,labels&date_format=millis&filter=label%3Aqa_metric%20includedone%3Atrue"`
     add_to_table(output,table)
   end
   return table
@@ -124,6 +127,7 @@ def print_compact_table_header()
   html = ""
   html << "      <col class=\"abstract-col\" />\n"
   html << "      <col class=\"id-col\" />\n"
+  html << "      <col class=\"product-col\" />\n"
   html << "      <col class=\"description-col\" />\n"
   html << "      <col class=\"impact-col\" />\n"
   html << "      <col class=\"age-col\" />\n"
@@ -132,6 +136,7 @@ def print_compact_table_header()
   html << "      <tr>\n"
   html << "        <th>Abstract</th>\n"
   html << "        <th>Work Item</th>\n"
+  html << "        <th>Product</th>\n"
   html << "        <th>Description</th>\n"
   html << "        <th>Impact</th>\n"
   html << "        <th>Age</th>\n"
@@ -147,6 +152,7 @@ def print_compact_table_row(defect)
       html << "      <tr>\n"
       html << "        <td><b><a href=\"https://www.pivotaltracker.com/story/show/#{defect.id}\">#{defect.fields["abstract"]}</a></b></td>\n"
       html << "        <td>#{defect.fields["work item"]}</td>\n"
+      html << "        <td>#{defect.fields["product"]}</td>\n"
       html << "        <td>#{defect.fields["description"]}</td>\n"
       html << "        <td>#{defect.fields["impact"]}</td>\n"
       html << "        <td>#{defect.age.to_s}</td>\n"
@@ -270,19 +276,167 @@ def all_defect_status(defects)
   File.open("all_defect_status.html", 'w') { |file| file.write(html) }
 end
 
-def build_backlog_graph
+
+def build_backlog_graph(defects)
   require 'gruff'
+  first_date = Time.new(2014,9,1)
+  today_date = Time.now
+  next_date = first_date
+  dates = []
+  backlog_critical = []
+  backlog_major = []
+  backlog_moderate = []
+  backlog_minor = []
+  backlog_unprioritized = []
+  backlog_total = []
+  while next_date < today_date
+    dates << next_date
+    next_date = next_date + 86400 + 4000 # Get more than an hour into the next day
+    next_date = Time.new(next_date.strftime("%Y"),next_date.strftime("%m"),next_date.strftime("%d"))
+  end
+  dates.each do |date|
+    critical = 0
+    major = 0
+    moderate = 0
+    minor = 0
+    unprioritized = 0
+    total = 0
+    defects.each do |defect|
+      if defect.was_active?(date)
+        total += 1
+        case defect.priority 
+        when :critical
+          critical += 1
+        when :major
+          major += 1
+        when :moderate
+          moderate += 1
+        when :minor
+          minor += 1
+        else 
+          unprioritized += 1
+        end
+      end
+    end
+    backlog_critical << critical
+    backlog_major << major
+    backlog_moderate << moderate
+    backlog_minor << minor
+    backlog_unprioritized << unprioritized
+    backlog_total << total
+  end
+
+  label_hash = Hash.new
+  [0, (dates.size/2).round, dates.size-1].each do |i|
+    label_hash[i] = dates[i].strftime('%m/%d/%y') if dates[i]
+  end
+
   g = Gruff::StackedArea.new
+  g.title = "Defect Backlog"
+  g.colors = ["#FF0000", "#FF8000", "#FFFF00", "#2F5597", "#D9D9D9"]
+  g.labels = label_hash
+  g.data :Critical, backlog_critical
+  g.data :Major, backlog_major
+  g.data :Moderate, backlog_moderate
+  g.data :Minor, backlog_minor
+  g.data :Unprioritized, backlog_unprioritized
+  g.write('defect_backlog.png')
+
+  html = "<html>\n"
+  html << "  <head>\n"
+  html << "    <link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">\n"
+  html << "    <title>Defect Backlog</title>\n"
+  html << "  </head>\n"
+  html << "  <body>\n"
+  html << "    <h1>Defect Backlog - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
+  html << "    <img src=\"defect_backlog.png\">\n"
+  html << "  </body>\n"
+  html << "</html>\n"
+
+  File.open("defect_backlog.html", 'w') { |file| file.write(html) }
+end
+
+
+def build_arrivals_graph(defects)
+  require 'gruff'
+  first_date = Time.new(2014,8,1)
+  today_date = Time.now
+  next_date = first_date
+  dates = []
+  arrivals_critical = []
+  arrivals_major = []
+  arrivals_moderate = []
+  arrivals_minor = []
+  arrivals_unprioritized = []
+  arrivals_total = []
+  while next_date < today_date
+    dates << next_date
+    next_date = next_date + 86400*7 + 4000 # Get more than an hour into the next week
+    next_date = Time.new(next_date.strftime("%Y"),next_date.strftime("%m"),next_date.strftime("%d"))
+  end
+  dates.each do |date|
+    beginning_of_week = date
+    end_date = date + 86400*7 + 4000
+    end_of_week = Time.new(end_date.strftime("%Y"),end_date.strftime("%m"),end_date.strftime("%d"))
+    critical = 0
+    major = 0
+    moderate = 0
+    minor = 0
+    unprioritized = 0
+    total = 0
+    defects.each do |defect|
+      if defect.opened_between?(beginning_of_week,end_of_week)
+        total += 1
+        case defect.priority 
+        when :critical
+          critical += 1
+        when :major
+          major += 1
+        when :moderate
+          moderate += 1
+        when :minor
+          minor += 1
+        else 
+          unprioritized += 1
+        end
+      end
+    end
+    arrivals_critical << critical
+    arrivals_major << major
+    arrivals_moderate << moderate
+    arrivals_minor << minor
+    arrivals_unprioritized << unprioritized
+    arrivals_total << total
+  end
+
+  label_hash = Hash.new
+  [0, (dates.size/2).round, dates.size-1].each do |i|
+    label_hash[i] = dates[i].strftime('%m/%d/%y') if dates[i]
+  end
+
+  g = Gruff::StackedBar.new
   g.title = "Defect Arrivals"
-  g.colors = ["#FF0000", "#FFC000", "#FFFF00", "#2F5597", "#D9D9D9"]
-  g.labels = { 0 => '5/6', 1 => '5/15', 2 => '5/24', 3 => '5/30', 4 => '6/4',
-               5 => '6/12', 6 => '6/21', 7 => '6/28' }
-  g.data :Critical, [25, 36, 86, 39, 25, 31, 79, 88]
-  g.data :Major, [80, 54, 67, 54, 68, 70, 90, 95]
-  g.data :Moderate, [22, 29, 35, 38, 36, 40, 46, 57]
-  g.data :Minor, [95, 95, 95, 90, 85, 80, 88, 100]
-  g.data :Unprioritized, [90, 34, 23, 12, 78, 89, 98, 88]
-  g.write('arrivals.png')
+  g.colors = ["#FF0000", "#FF8000", "#FFFF00", "#2F5597", "#D9D9D9"]
+  g.labels = label_hash
+  g.data :Critical, arrivals_critical
+  g.data :Major, arrivals_major
+  g.data :Moderate, arrivals_moderate
+  g.data :Minor, arrivals_minor
+  g.data :Unprioritized, arrivals_unprioritized
+  g.write('defect_arrivals.png')
+
+  html = "<html>\n"
+  html << "  <head>\n"
+  html << "    <link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">\n"
+  html << "    <title>Defect Arrivals</title>\n"
+  html << "  </head>\n"
+  html << "  <body>\n"
+  html << "    <h1>Defect Backlog - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
+  html << "    <img src=\"defect_arrivals.png\">\n"
+  html << "  </body>\n"
+  html << "</html>\n"
+
+  File.open("defect_arrivals.html", 'w') { |file| file.write(html) }
 end
 
 puts "Building Defect List"
@@ -291,3 +445,7 @@ puts "Creating Active Defect Report"
 active_defect_status(defects)
 puts "Creating All Defect Report"
 all_defect_status(defects)
+puts "Building Backlog Graph"
+build_backlog_graph(defects)
+puts "Building Arrivals Graph"
+build_arrivals_graph(defects)
