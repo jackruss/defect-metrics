@@ -53,7 +53,11 @@ def add_to_table(output,table)
     # Parse the current_state
     defect.fields["state"] = story["current_state"]
     if defect.fields["state"] == "accepted"
-      defect.closed_date = Time.at(story["accepted_at"] / 1000)
+      defect.accepted_date = Time.at(story["accepted_at"] / 1000)
+      this_comment = Hash.new
+      this_comment["status_update"] = "Fix accepted by QA."
+      this_comment["status_time"] = defect.accepted_date
+      defect.comments << this_comment
     end
 
     # Parse the labels
@@ -84,7 +88,6 @@ def add_to_table(output,table)
     end
 
     # Parse the comments
-    defect.fields["comments"] = []
     story["comments"].each do |comment|
       if comment["text"] =~ /STATUS: /
         this_comment = Hash.new
@@ -92,10 +95,16 @@ def add_to_table(output,table)
         this_comment["status_update"] = status_update
         status_time = Time.at(comment["created_at"] / 1000)
         this_comment["status_time"] = status_time
-        defect.fields["comments"] << this_comment
+        defect.comments << this_comment
+      end
+      if comment["text"] =~ /SHIPPED: /
+        shipped_text = comment["text"].gsub(/.*STATUS: /,"")
+        defect.shipped_date = Time.parse(shipped_text)
       end
     end
 
+    defect.comments = defect.comments.sort_by { |comment| [comment["status_time"]] }
+     
     table << defect
 
   end
@@ -158,7 +167,7 @@ def print_compact_table_row(defect)
       html << "        <td>#{defect.age.to_s}</td>\n"
       html << "        <td>#{defect.get_priority_text}</td>\n"
       html << "        <td>\n"
-      defect.fields["comments"].each do |comment|
+      defect.comments.each do |comment|
         html << "<b>#{comment["status_time"].strftime("%m/%d/%Y")}</b> #{comment["status_update"]}<br />\n"
       end
       html << "</td>\n"
@@ -208,7 +217,7 @@ def active_defect_status(defects)
   html << "    <table class=\"compact-table\">\n"
   html << print_compact_table_header()
   priority_table.each do |defect|
-    unless defect.fields["state"] == "accepted" 
+    unless defect.shipped_date
       html << print_compact_table_row(defect)
     end
   end
@@ -263,7 +272,7 @@ def all_defect_status(defects)
     html << "        <td>#{defect.get_priority_text}</td>\n"
     html << "        <td>#{defect.fields["originator"]}</td>\n"
     html << "        <td>\n"
-    defect.fields["comments"].each do |comment|
+    defect.comments.each do |comment|
       html << "<b>#{comment["status_time"].strftime("%m/%d/%Y")}</b> #{comment["status_update"]}<br />\n"
     end
     html << "</td>\n"
@@ -359,7 +368,7 @@ end
 
 def build_arrivals_graph(defects)
   require 'gruff'
-  first_date = Time.new(2014,8,1)
+  first_date = Time.new(2014,9,1)
   today_date = Time.now
   next_date = first_date
   dates = []
@@ -431,7 +440,7 @@ def build_arrivals_graph(defects)
   html << "    <title>Defect Arrivals</title>\n"
   html << "  </head>\n"
   html << "  <body>\n"
-  html << "    <h1>Defect Backlog - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
+  html << "    <h1>Defect Arrivals - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
   html << "    <img src=\"defect_arrivals.png\">\n"
   html << "  </body>\n"
   html << "</html>\n"

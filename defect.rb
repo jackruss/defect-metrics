@@ -2,16 +2,20 @@ class Defect
 
   attr_writer :fields, 
     :age,
-    :closed_date,
+    :accepted_date,
+    :comments,
     :id,
     :opened_date,
-    :priority
+    :priority,
+    :shipped_date
   attr_reader :fields, 
     :age,
-    :closed_date,
+    :accepted_date,
+    :comments,
     :id,
     :opened_date,
-    :priority
+    :priority,
+    :shipped_date
 
   @@all = []
 
@@ -19,9 +23,11 @@ class Defect
   def initialize
     @id = nil
     @priority = nil
+    @comments = []
 
     @opened_date = nil
-    @closed_date = nil
+    @accepted_date = nil
+    @shipped_date = nil
     @age = nil
 
     @fields = Hash.new
@@ -63,7 +69,7 @@ class Defect
 
 
   def was_active?(date)
-    if @opened_date <= date and (!@closed_date or @closed_date >= date)
+    if @opened_date <= date and (!@shipped_date or @shipped_date >= date)
       return true
     else
       return false
