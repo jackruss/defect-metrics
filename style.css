@@ -33,6 +33,7 @@ a:active {
 }
 
 .status-table {
+  table-layout: fixed;
   border: 1px solid black;
 }
 
@@ -58,12 +59,16 @@ td {
   padding: 5px;
 }
 
-.workitem-col {
-  width: 80px;
+.inactive-data {
+  background-color: #AAAAAA;
 }
 
 .abstract-col {
   width: 250px;
+}
+
+.age-col {
+  width: 30px;
 }
 
 .description-col {
@@ -74,11 +79,19 @@ td {
   width: 300px;
 }
 
-.age-col {
-  width: 30px;
+.openeddate-col {
+  width: 100px;
 }
 
 .prioritization-col {
+  width: 100px;
+}
+
+.product-col {
+  width: 100px;
+}
+
+.shippeddate-col {
   width: 100px;
 }
 
@@ -86,6 +99,7 @@ td {
   width: 400px;
 }
 
-.product-col {
-  width: 100px;
+.workitem-col {
+  width: 80px;
 }
+

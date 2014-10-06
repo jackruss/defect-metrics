@@ -104,7 +104,7 @@ def add_to_table(output,table)
       end
       if comment["text"] =~ /SHIPPED: /
         shipped_text = comment["text"].gsub(/.*STATUS: /,"")
-        defect.shipped_date = Time.parse(shipped_text)
+        defect.shipped_date = Time.parse(shipped_text) + 86400 - 3601 # add 22:59:59
         this_comment = Hash.new
         this_comment["status_update"] = "Fix shipped to production."
         this_comment["status_time"] = defect.shipped_date
@@ -197,17 +197,17 @@ def active_defect_status(defects)
 end
 
 
-def all_defect_status(defects)
-  priority_table = defects.sort_by { |defect| [defect.get_priority_value,defect.age] }
+def all_defect_info(defects)
+  priority_table = defects.sort_by { |defect| [defect.opened_date] }.reverse
 
-  all_defect_status = Table.new([:product,:workitem,:abstract,:description,:impact,:age,:prioritization,:originator,:status])
+  all_defect_info = Table.new([:product,:workitem,:abstract,:description,:impact,:opened_date,:shipped_date,:prioritization,:originator,:status])
   html = print_page_header("All Defect Status")
   html << "    <h1>Defect Status - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
-  html << "    <p>Defects are listed in priority order, as determined by QA and via the weekly bug scrub.</p>\n"
-  html << all_defect_status.get_html(priority_table)
+  html << "    <p>Defects are sorted by origination date, from newest to oldest.</p>\n"
+  html << all_defect_info.get_html(priority_table)
   html << print_page_footer
 
-  File.open("all_defect_status.html", 'w') { |file| file.write(html) }
+  File.open("all_defect_info.html", 'w') { |file| file.write(html) }
 end
 
 
@@ -378,7 +378,7 @@ defects = build_defect_list()
 puts "Creating Active Defect Report"
 active_defect_status(defects)
 puts "Creating All Defect Report"
-all_defect_status(defects)
+all_defect_info(defects)
 puts "Building Backlog Graph"
 build_backlog_graph(defects)
 puts "Building Arrivals Graph"

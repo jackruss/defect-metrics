@@ -8,4 +8,4 @@ export MYDIR=/home/attuser/git/defect-metrics
 cd $MYDIR
 $RUBY $MYDIR/metrics.rb
 
-lftp sftp://$INETCREDENTIALS@onyx  -e "cd /var/www/wordpress/wp-content/uploads/2013/02; lcd $MYDIR; put defect_status.html; put style.css; put qa.html; put defect_backlog.png; put defect_backlog.html; put defect_arrivals.png; put defect_arrivals.html; bye"
+lftp sftp://$INETCREDENTIALS@onyx  -e "cd /var/www/wordpress/wp-content/uploads/2013/02; lcd $MYDIR; put style.css; put defect_status.html; put all_defect_info.html; put qa.html; put defect_backlog.png; put defect_backlog.html; put defect_arrivals.png; put defect_arrivals.html; bye"
