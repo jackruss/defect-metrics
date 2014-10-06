@@ -1,6 +1,7 @@
 require 'json'
 require 'time'
 require './defect'
+require './table'
 
 def add_to_table(output,table)
   #puts output
@@ -47,6 +48,10 @@ def add_to_table(output,table)
 
     # Compute age
     defect.opened_date = Time.parse(defect.fields["opened"]) if defect.fields["opened"]
+      this_comment = Hash.new
+      this_comment["status_update"] = "Defect opened."
+      this_comment["status_time"] = defect.opened_date
+      defect.comments << this_comment
     current_date = Time.now
     defect.age = (current_date - defect.opened_date).to_i / (24 * 60 * 60)
 
@@ -100,6 +105,10 @@ def add_to_table(output,table)
       if comment["text"] =~ /SHIPPED: /
         shipped_text = comment["text"].gsub(/.*STATUS: /,"")
         defect.shipped_date = Time.parse(shipped_text)
+        this_comment = Hash.new
+        this_comment["status_update"] = "Fix shipped to production."
+        this_comment["status_time"] = defect.shipped_date
+        defect.comments << this_comment
       end
     end
 
@@ -129,158 +138,74 @@ def build_defect_list
 end
 
 
-def print_compact_table()
-end
-
-def print_compact_table_header()
+def print_defect_status_count_table
   html = ""
-  html << "      <col class=\"abstract-col\" />\n"
-  html << "      <col class=\"id-col\" />\n"
-  html << "      <col class=\"product-col\" />\n"
-  html << "      <col class=\"description-col\" />\n"
-  html << "      <col class=\"impact-col\" />\n"
-  html << "      <col class=\"age-col\" />\n"
-  html << "      <col class=\"prioritization-col\" />\n"
-  html << "      <col class=\"status-col\" />\n"
-  html << "      <tr>\n"
-  html << "        <th>Abstract</th>\n"
-  html << "        <th>Work Item</th>\n"
-  html << "        <th>Product</th>\n"
-  html << "        <th>Description</th>\n"
-  html << "        <th>Impact</th>\n"
-  html << "        <th>Age</th>\n"
-  html << "        <th>Prioritization</th>\n"
-  html << "        <th>Status</th>\n"
-  html << "      </tr>\n"
-  return html
-end
-
-
-def print_compact_table_row(defect)
-      html = ""
-      html << "      <tr>\n"
-      html << "        <td><b><a href=\"https://www.pivotaltracker.com/story/show/#{defect.id}\">#{defect.fields["abstract"]}</a></b></td>\n"
-      html << "        <td>#{defect.fields["work item"]}</td>\n"
-      html << "        <td>#{defect.fields["product"]}</td>\n"
-      html << "        <td>#{defect.fields["description"]}</td>\n"
-      html << "        <td>#{defect.fields["impact"]}</td>\n"
-      html << "        <td>#{defect.age.to_s}</td>\n"
-      html << "        <td>#{defect.get_priority_text}</td>\n"
-      html << "        <td>\n"
-      defect.comments.each do |comment|
-        html << "<b>#{comment["status_time"].strftime("%m/%d/%Y")}</b> #{comment["status_update"]}<br />\n"
-      end
-      html << "</td>\n"
-      html << "      </tr>\n"
-      return html
-end
-
-
-def active_defect_status(defects)
-  priority_table = defects.sort_by { |defect| [defect.get_priority_value,defect.age] }
-
-  html = "<html>\n"
-  html << "  <head>\n"
-  html << "    <link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">\n"
-  html << "    <title>Defect Status</title>\n"
-  html << "  </head>\n"
-  html << "  <body>\n"
-  html << "    <h1>Active Defect Status - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
   html << "    <table class=\"defect-counts\">\n"
   html << "      <tr>\n"
   html << "      <th>Priority</th>\n"
   html << "      <th>Defects</th>\n"
   html << "      </tr>\n"
-  html << "      <tr>\n"
-  html << "      <td>Critical</td>\n"
-  html << "      <td>#{Defect::get_priority_count(:critical)}</td>\n"
-  html << "      </tr>\n"
-  html << "      <tr>\n"
-  html << "      <td>Major</td>\n"
-  html << "      <td>#{Defect::get_priority_count(:major)}</td>\n"
-  html << "      </tr>\n"
-  html << "      <tr>\n"
-  html << "      <td>Moderate</td>\n"
-  html << "      <td>#{Defect::get_priority_count(:moderate)}</td>\n"
-  html << "      </tr>\n"
-  html << "      <tr>\n"
-  html << "      <td>Minor</td>\n"
-  html << "      <td>#{Defect::get_priority_count(:minor)}</td>\n"
-  html << "      </tr>\n"
-  html << "      <tr>\n"
-  html << "      <td>Unprioritized</td>\n"
-  html << "      <td>#{Defect::get_priority_count(:unprioritized)}</td>\n"
-  html << "      </tr>\n"
+  rows = [["Critical",:critical],["Major",:major],["Moderate",:moderate],["Minor",:minor],["Unprioritized",:unprioritized]]
+  rows.each { |category,label|
+    html << "      <tr>\n"
+    html << "      <td>#{category}</td>\n"
+    html << "      <td>#{Defect::get_priority_count(label)}</td>\n"
+    html << "      </tr>\n"
+  }
   html << "    </table>\n"
-  html << "    <br />\n"
-  html << "    <p>Defects are listed in priority order, as determined by QA and via the weekly bug scrub.</p>\n"
-  html << "    <table class=\"compact-table\">\n"
-  html << print_compact_table_header()
-  priority_table.each do |defect|
-    unless defect.shipped_date
-      html << print_compact_table_row(defect)
-    end
-  end
-  html << "    </table>\n"
+  return html
+end
+
+
+def print_page_header(title)
+  html = ""
+  html << "<html>\n"
+  html << "  <head>\n"
+  html << "    <link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">\n"
+  html << "    <title>#{title}</title>\n"
+  html << "  </head>\n"
+  html << "  <body>\n"
+  return html
+end
+
+
+def print_page_footer
+  html = ""
   html << "  </body>\n"
   html << "</html>\n"
+  return html
+end
+
+
+def active_defect_status(defects)
+  priority_table = defects.sort_by { |defect| [defect.get_priority_value,defect.age] }
+  active_defects = []
+  priority_table.each {|defect|
+    active_defects << defect unless defect.shipped_date
+  }
+
+  html = print_page_header("Active Defect Status")
+  html << "    <h1>Active Defect Status - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
+  html << print_defect_status_count_table()
+  html << "    <br />\n"
+  html << "    <p>Defects are listed in priority order, as determined by QA and via the weekly bug scrub.</p>\n"
+  active_defect_status = Table.new([:abstract,:workitem,:product,:description,:impact,:age,:prioritization,:status])
+  html << active_defect_status.get_html(active_defects)
+  html << print_page_footer
 
   File.open("defect_status.html", 'w') { |file| file.write(html) }
 end
 
+
 def all_defect_status(defects)
   priority_table = defects.sort_by { |defect| [defect.get_priority_value,defect.age] }
 
-  html = "<html>\n"
-  html << "  <head>\n"
-  html << "    <link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">\n"
-  html << "    <title>All Defect Status</title>\n"
-  html << "  </head>\n"
-  html << "  <body>\n"
+  all_defect_status = Table.new([:product,:workitem,:abstract,:description,:impact,:age,:prioritization,:originator,:status])
+  html = print_page_header("All Defect Status")
   html << "    <h1>Defect Status - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
   html << "    <p>Defects are listed in priority order, as determined by QA and via the weekly bug scrub.</p>\n"
-  html << "    <table>\n"
-  html << "      <col class=\"product-col\" />\n"
-  html << "      <col class=\"id-col\" />\n"
-  html << "      <col class=\"abstract-col\" />\n"
-  html << "      <col class=\"description-col\" />\n"
-  html << "      <col class=\"impact-col\" />\n"
-  html << "      <col class=\"age-col\" />\n"
-  html << "      <col class=\"prioritization-col\" />\n"
-  html << "      <col class=\"originator-col\" />\n"
-  html << "      <col class=\"status-col\" />\n"
-  html << "      <tr>\n"
-  html << "        <th>Product</th>\n"
-  html << "        <th>Work Item</th>\n"
-  html << "        <th>Abstract</th>\n"
-  html << "        <th>Description</th>\n"
-  html << "        <th>Impact</th>\n"
-  html << "        <th>Age</th>\n"
-  html << "        <th>Prioritization</th>\n"
-  html << "        <th>Originator</th>\n"
-  html << "        <th>Status</th>\n"
-  html << "      </tr>\n"
-  priority_table.each do |defect|
-    html << "      <tr>\n"
-    html << "        <td><b><a href=\"https://www.pivotaltracker.com/story/show/#{defect.id}\">#{defect.fields["abstract"]}</a></b></td>\n"
-    html << "        <td>#{defect.fields["work item"]}</td>\n"
-    html << "        <td>#{defect.fields["product"]}</td>\n"
-    html << "        <td>#{defect.fields["abstract"]}</td>\n"
-    html << "        <td>#{defect.fields["description"]}</td>\n"
-    html << "        <td>#{defect.fields["impact"]}</td>\n"
-    html << "        <td>#{defect.age.to_s}</td>\n"
-    html << "        <td>#{defect.get_priority_text}</td>\n"
-    html << "        <td>#{defect.fields["originator"]}</td>\n"
-    html << "        <td>\n"
-    defect.comments.each do |comment|
-      html << "<b>#{comment["status_time"].strftime("%m/%d/%Y")}</b> #{comment["status_update"]}<br />\n"
-    end
-    html << "</td>\n"
-    html << "      </tr>\n"
-  end
-  html << "    </table>\n"
-  html << "  </body>\n"
-  html << "</html>\n"
+  html << all_defect_status.get_html(priority_table)
+  html << print_page_footer
 
   File.open("all_defect_status.html", 'w') { |file| file.write(html) }
 end

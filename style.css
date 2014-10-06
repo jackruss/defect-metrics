@@ -32,9 +32,8 @@ a:active {
   width: 400;
 }
 
-.compact-table {
+.status-table {
   border: 1px solid black;
-  width: 1430px;
 }
 
 tr:nth-child(even) {
@@ -59,7 +58,7 @@ td {
   padding: 5px;
 }
 
-.id-col {
+.workitem-col {
   width: 80px;
 }
 
