@@ -89,7 +89,7 @@ class Defect
   def self.get_priority_count(priority)
     count = 0
     @@all.each { |defect|
-      count += 1 if defect.priority == priority
+      count += 1 if defect.priority == priority and !defect.shipped_date
     }
     count
   end
