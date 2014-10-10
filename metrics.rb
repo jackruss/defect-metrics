@@ -186,9 +186,12 @@ def active_defect_status(defects)
 
   html = print_page_header("Active Defect Status")
   html << "    <h1>Active Defect Status - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
+  html << "    <p>All defects in this report impact GA products.  The data presented here is updated hourly from the live Pivotal Tracker data.</p>\n"
+  html << "    <h2>Active Defect Backlog by Priority</h2>\n"
   html << print_defect_status_count_table()
   html << "    <br />\n"
-  html << "    <p>Defects are listed in priority order, as determined by QA and via the weekly bug scrub.</p>\n"
+  html << "    <h2>Active Defects</h2>\n"
+  html << "    <p>Defects are listed in priority order, as determined by QA and via the weekly bug scrub.  Hyperlinks in the \"Abstract\" column will take you directly to the associated Pivotal Tracker story for each defect.</p>\n"
   active_defect_status = Table.new([:abstract,:workitem,:product,:description,:impact,:age,:prioritization,:status])
   html << active_defect_status.get_html(active_defects)
   html << print_page_footer
@@ -201,9 +204,9 @@ def all_defect_info(defects)
   priority_table = defects.sort_by { |defect| [defect.opened_date] }.reverse
 
   all_defect_info = Table.new([:product,:workitem,:abstract,:description,:impact,:opened_date,:shipped_date,:prioritization,:originator,:status])
-  html = print_page_header("All Defect Status")
-  html << "    <h1>Defect Status - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
-  html << "    <p>Defects are sorted by origination date, from newest to oldest.</p>\n"
+  html = print_page_header("All Defect Info")
+  html << "    <h1>All Defect Information - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
+  html << "    <p>All defects in this report impact GA products.  The data presented here is updated hourly from the live Pivotal Tracker data.  Defects are sorted by origination date, from newest to oldest.  Resolved defects are grayed out.  Hyperlinks in the \"Abstract\" column will take you directly to the associated Pivotal Tracker story for each defect.</p>\n"
   html << all_defect_info.get_html(priority_table)
   html << print_page_footer
 
@@ -283,6 +286,7 @@ def build_backlog_graph(defects)
   html << "  </head>\n"
   html << "  <body>\n"
   html << "    <h1>Defect Backlog - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
+  html << "    <p>This graph shows the backlog of open defects products over time, grouped by priority.  Only defects against GA products are displayed.</p>\n"
   html << "    <img src=\"defect_backlog.png\">\n"
   html << "  </body>\n"
   html << "</html>\n"
@@ -366,6 +370,7 @@ def build_arrivals_graph(defects)
   html << "  </head>\n"
   html << "  <body>\n"
   html << "    <h1>Defect Arrivals - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
+  html << "    <p>This graph shows defect arrivals per week, grouped by priority.  Only defects against GA products are displayed.</p>\n"
   html << "    <img src=\"defect_arrivals.png\">\n"
   html << "  </body>\n"
   html << "</html>\n"
