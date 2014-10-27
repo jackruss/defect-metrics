@@ -7,6 +7,7 @@ class Defect
     :id,
     :opened_date,
     :priority,
+    :product,
     :shipped_date
   attr_reader :fields, 
     :age,
@@ -15,6 +16,7 @@ class Defect
     :id,
     :opened_date,
     :priority,
+    :product,
     :shipped_date
 
   @@all = []
@@ -23,6 +25,7 @@ class Defect
   def initialize
     @id = nil
     @priority = nil
+    @product = nil
     @comments = []
 
     @opened_date = nil

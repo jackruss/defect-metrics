@@ -45,10 +45,21 @@ class Table
       end
       @column_data << [col_label,col_class,col_title]
     }
+    @defects = []
   end
 
 
-  def get_html(defects)
+  def add_defect_list(defects)
+    @defects = defects
+  end
+
+
+  def add_defect(defect)
+    @defects << defect
+  end
+
+
+  def get_html()
     html = ""
     html << "    <table class=\"status-table\">\n"
     @column_data.each { |col_label,col_class,col_title|
@@ -59,7 +70,7 @@ class Table
       html << "        <th class=\"#{col_class}\">#{col_title}</th>\n"
     }
     html << "      </tr>\n"
-    defects.each do |defect|
+    @defects.each do |defect|
       html << "      <tr>\n"
       @column_data.each do |col_label,col_class,col_title|
         case col_label
@@ -78,7 +89,7 @@ class Table
         when :prioritization
           data = defect.get_priority_text
         when :product
-          data = defect.fields["product"]
+          data = defect.product
         when :shipped_date
           if defect.shipped_date
             data = defect.shipped_date.strftime("%m/%d/%Y")
