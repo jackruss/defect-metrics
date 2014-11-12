@@ -125,16 +125,25 @@ def add_to_table(output,table)
 
       # Parse the comments
       story["comments"].each do |comment|
-        if comment["text"] =~ /STATUS: /
+        if comment["text"] =~ /STATUS: /i
           this_comment = Hash.new
-          status_update = comment["text"].gsub(/.*STATUS: /,"")
+          status_update = comment["text"].gsub(/.*STATUS: /i,"")
           this_comment["status_update"] = status_update
           status_time = Time.at(comment["created_at"] / 1000)
           this_comment["status_time"] = status_time
           defect.comments << this_comment
         end
-        if comment["text"] =~ /SHIPPED: /
-          shipped_text = comment["text"].gsub(/.*STATUS: /,"")
+        if comment["text"] =~ /ACCEPTED: /i
+          accepted_text = comment["text"].gsub(/.*ACCEPTED: /i,"")
+          defect.accepted_date = Time.parse(accepted_text) + 86400 - 3602 # add 22:59:58
+          defect.comments.each do |a_comment|
+            if a_comment["status_update"] == "Fix accepted by QA."
+              a_comment["status_time"] = defect.accepted_date
+            end
+          end
+        end
+        if comment["text"] =~ /SHIPPED: /i
+          shipped_text = comment["text"].gsub(/.*SHIPPED: /i,"")
           defect.shipped_date = Time.parse(shipped_text) + 86400 - 3601 # add 22:59:59
           this_comment = Hash.new
           this_comment["status_update"] = "Fix shipped to production."
