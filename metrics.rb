@@ -9,6 +9,8 @@ def add_to_table(output,table)
   story_data = JSON.parse(output)
   story_data.each do |story|
 
+    puts "Reading story #{story["id"]}"
+
     unless story["name"] =~ /QA Defect Template/
       defect = Defect.new
       defect.id = story["id"]
@@ -237,7 +239,7 @@ def active_defect_status(defects)
   html << active_defect_status.get_html()
 
   html << print_page_footer
-  File.open("defect_status.html", 'w') { |file| file.write(html) }
+  File.open("output/defect_status.html", 'w') { |file| file.write(html) }
 end
 
 
@@ -251,7 +253,7 @@ def all_defect_info(defects)
   html << all_defect_info.get_html()
 
   html << print_page_footer
-  File.open("all_defect_info.html", 'w') { |file| file.write(html) }
+  File.open("output/all_defect_info.html", 'w') { |file| file.write(html) }
 end
 
 
@@ -305,7 +307,7 @@ def weekly_defect_status(defects)
   html << ready_to_ship.get_html()
 
   html << print_page_footer
-  File.open("weekly_defect_update.html", 'w') { |file| file.write(html) }
+  File.open("output/weekly_defect_update.html", 'w') { |file| file.write(html) }
 end
 
 
@@ -372,7 +374,7 @@ def build_backlog_graph(defects)
   g.data :Moderate, backlog_moderate
   g.data :Minor, backlog_minor
   g.data :Unprioritized, backlog_unprioritized
-  g.write('defect_backlog.png')
+  g.write('output/defect_backlog.png')
 
   html = "<html>\n"
   html << "  <head>\n"
@@ -386,7 +388,7 @@ def build_backlog_graph(defects)
   html << "  </body>\n"
   html << "</html>\n"
 
-  File.open("defect_backlog.html", 'w') { |file| file.write(html) }
+  File.open("output/defect_backlog.html", 'w') { |file| file.write(html) }
 end
 
 
@@ -456,7 +458,7 @@ def build_arrivals_graph(defects)
   g.data :Moderate, arrivals_moderate
   g.data :Minor, arrivals_minor
   g.data :Unprioritized, arrivals_unprioritized
-  g.write('defect_arrivals.png')
+  g.write('output/defect_arrivals.png')
 
   html = "<html>\n"
   html << "  <head>\n"
@@ -470,7 +472,7 @@ def build_arrivals_graph(defects)
   html << "  </body>\n"
   html << "</html>\n"
 
-  File.open("defect_arrivals.html", 'w') { |file| file.write(html) }
+  File.open("output/defect_arrivals.html", 'w') { |file| file.write(html) }
 end
 
 puts "Building Defect List"
