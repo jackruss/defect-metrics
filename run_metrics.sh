@@ -2,7 +2,7 @@
 
 #export INETCREDENTIALS=xxxxxxxxxxxxxxx
 #export PT_TOKEN=xxxxxxxxxxxxxxx
-export RUBY=/home/attuser/.rvm/rubies/jruby-1.7.15/bin/ruby
+export RUBY=/home/attuser/.rvm/rubies/ruby-2.0.0-p481/bin/ruby
 export MYDIR=/home/attuser/git/defect-metrics
 
 cd $MYDIR
