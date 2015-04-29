@@ -9,7 +9,7 @@ def add_to_table(output,table)
   story_data = JSON.parse(output)
   story_data.each do |story|
 
-    puts "Reading story #{story["id"]}"
+    puts "Reading story #{story["id"]}: #{story["name"]}"
 
     unless story["name"] =~ /QA Defect Template/
       defect = Defect.new
@@ -29,7 +29,7 @@ def add_to_table(output,table)
       # Parse the PT description text
       string_to_parse = story["description"]
 
-      template_fields = ["ABSTRACT","DESCRIPTION","IMPACT","PRODUCT","ORIGINATOR","DETAILS","OPENED"]
+      template_fields = ["ABSTRACT","DESCRIPTION","IMPACT","PRODUCT","ORIGINATOR","DETAILS","OPENED","INJECTED_IN"]
       splitstring = "%%%JMR%PARSE%HERE%%%"
       template_fields.each do |template_field|
         string_to_parse = string_to_parse.gsub(/[\n ]*#{template_field}:[\n ]*/,"#{splitstring}#{template_field}: ")
@@ -247,7 +247,7 @@ def all_defect_info(defects)
   html = print_page_header("All Defect Info")
   html << "    <h1>All Defect Information - #{Time.now.strftime("%Y/%m/%d %H:%M")}</h1>\n"
   html << "    <p>All defects in this report impact GA products.  The data presented here is updated hourly from the live Pivotal Tracker data.  Defects are sorted by origination date, from newest to oldest.  Resolved defects are grayed out.  Hyperlinks in the \"Abstract\" column will take you directly to the associated Pivotal Tracker story for each defect.</p>\n"
-  all_defect_info = Table.new([:product,:workitem,:abstract,:description,:impact,:opened_date,:shipped_date,:prioritization,:originator,:status])
+  all_defect_info = Table.new([:product,:workitem,:abstract,:description,:impact,:opened_date,:shipped_date,:injected_in,:prioritization,:originator,:status])
   sorted_defect_list = defects.sort_by { |defect| [defect.opened_date] }.reverse
   all_defect_info.add_defect_list(sorted_defect_list)
   html << all_defect_info.get_html()

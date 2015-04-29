@@ -16,6 +16,9 @@ class Table
       when :description
         col_class = "description-col"
         col_title = "Description"
+      when :injected_in
+        col_class = "injected-col"
+        col_title = "Injected In"
       when :impact
         col_class = "impact-col"
         col_title = "Impact"
@@ -82,6 +85,8 @@ class Table
           data = defect.fields["description"]
         when :impact
           data = defect.fields["impact"]
+        when :injected_in
+          data = defect.fields["injected_in"]
         when :opened_date
           data = defect.opened_date.strftime("%m/%d/%Y")
         when :originator
